@@ -21,8 +21,7 @@ app.add_middleware(
 )
 
 
-# OPEN_API_KEY = os.getenv('OPEN_API_KEY')
-OPEN_API_KEY = "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"
+OPEN_API_KEY = os.getenv('OPEN_API_KEY')
 
 
 # @app.post("/api/process-prompt")
