@@ -1,3 +1,4 @@
 fastapi
 requests
-dot_env
+python-dotenv
+openai
