@@ -14,14 +14,14 @@ GATE_KEY = os.getenv('GATE_KEY')
 app = FastAPI()
 
 # for testing purposes
-# app.add_middleware(
-#     CORSMiddleware,
-#     # Replace with the origin of your Next.js app
-#     allow_origins=["http://localhost:3000"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
+app.add_middleware(
+    CORSMiddleware,
+    # Replace with the origin of your Next.js app
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 bearer_scheme = HTTPBearer()
 
