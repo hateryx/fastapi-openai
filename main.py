@@ -1,145 +1,69 @@
-import openai
-import json
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, HTTPException
-
-import requests
+from fastapi import FastAPI, Depends, HTTPException, status, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
+import openai
 
 import os
 from dotenv import load_dotenv
 
-app = FastAPI()
 load_dotenv()
+OPEN_API_KEY = os.getenv('OPENAI_API_KEY')
+GATE_KEY = os.getenv('GATE_KEY')
 
-app.add_middleware(
-    CORSMiddleware,
-    # Replace with the origin of your Next.js app
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI()
 
-
-OPEN_API_KEY = os.getenv('OPEN_API_KEY')
-
-
-# @app.post("/api/process-prompt")
-# async def process_prompt(prompt: dict):
-
-#     f_prompt = prompt.get('prompt')
-
-#     if not f_prompt:
-#         raise HTTPException(
-#             status_code=400, detail="Missing 'prompt' field in request payload")
-
-#     return {"message": "Processed prompt successfully"}
-
-# response = await requests.post(
-#     "https://api.openai.com/v1/engines/davinci-codex/completions",
-#     headers={
-#         "Authorization": f"Bearer {OPEN_API_KEY}",
-#         "Content-Type": "application/json",
-#     },
-#     json={
-#         "prompt": prompt,
-#         "max_tokens": 1000,
-#         "model": "gpt-3.5-turbo"
-#     }
+# for testing purposes
+# app.add_middleware(
+#     CORSMiddleware,
+#     # Replace with the origin of your Next.js app
+#     allow_origins=["http://localhost:3000"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
 # )
 
-# # Check if the request to the OpenAI API was successful
-# if response.status_code != 200:
-#     raise HTTPException(
-#         status_code=response.status_code,
-#         detail="Error processing prompt"
-#     )
-
-# # Get the response from the OpenAI API
-# openai_response = response.json()
-
-# # Return the OpenAI response to the original requester
-# return openai_response["choices"][0]["text"]
+bearer_scheme = HTTPBearer()
 
 
-# @app.post("/api/process-prompt")
-# async def process_prompt(prompt: dict):
-
-#     response = await requests.post(
-#         "https://api.openai.com/v1/engines/davinci-codex/completions",
-#         headers={
-#             "Authorization": f"Bearer {OPEN_API_KEY}",
-#             "Content-Type": "application/json",
-#         },
-#         json={
-#             "prompt": prompt,
-#             "max_tokens": 1000,
-#             "model": "gpt-3.5-turbo"
-#         }
-#     )
-
-#     # Check if the request to the OpenAI API was successful
-#     if response.status_code != 200:
-#         raise HTTPException(
-#             status_code=response.status_code,
-#             detail="Error processing prompt"
-#         )
-
-#     # Get the response from the OpenAI API
-#     openai_response = response.json()
-
-#     # Extract the desired text from the OpenAI response
-#     text = openai_response["choices"][0]["text"]
-
-#     # Create a response dictionary
-#     response_data = {
-#         "text": text
-#     }
-
-#     # Return the response as a JSON object
-#     return response_data
+class User(BaseModel):
+    username: str
 
 
-# @app.post("/api/process-prompt")
-# async def process_prompt(prompt: dict):
-#     async with httpx.AsyncClient() as client:
-#         response = await client.post(
-#             "https://api.openai.com/v1/engines/davinci-codex/completions",
-#             headers={
-#                 "Authorization": f"Bearer {OPEN_API_KEY}",
-#                 "Content-Type": "application/json",
-#             },
-#             json={
-#                 "prompt": "hello",
-#                 "max_tokens": 1000,
-#                 "model": "gpt-3.5-turbo"
-#             }
-#         )
+def get_current_user(authorization: str = Header(...)):
+    # Implement token verification logic here
+    # You can decode and verify the token, retrieve the user information,
+    # and check if the user has the required roles/permissions
 
-#         # Check if the request to the OpenAI API was successful
-#         if response.status_code != 200:
-#             raise HTTPException(
-#                 status_code=response.status_code,
-#                 detail="Error processing prompt"
-#             )
+    scheme, token = authorization.split(" ")
 
-#         # Get the response from the OpenAI API
-#         openai_response = response.json()
+    if scheme.lower() != "bearer" or token != GATE_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-#         # Extract the desired text from the OpenAI response
-#         text = openai_response["choices"][0]["text"]
-
-#         # Create a response dictionary
-#         response_data = {
-#             "text": text
-#         }
-
-#         # Return the response as a JSON object
-#         return response_data
+    if token == GATE_KEY:
+        user = User(username='next-ai-psych')
+        return user
+    else:
+        user = User(username='dummy')
+        return user
 
 
 @app.post("/api/process-prompt")
-async def process_prompt(prompt: dict):
+async def process_prompt(
+        prompt: dict,
+        current_user: User = Depends(get_current_user)):
+
+    if current_user.username != "next-ai-psych":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Begone you unauthorized being!",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     openai.api_key = OPEN_API_KEY
     f_prompt = prompt['prompt']
 
@@ -152,22 +76,13 @@ async def process_prompt(prompt: dict):
         ]
     )
 
-    # Check if the request to the OpenAI API was successful
-    # if response['code'] != 200:
-    #     raise HTTPException(
-    #         status_code=response['code'],
-    #         detail="Error processing prompt"
-    #     )
-
     # Extract the desired text from the OpenAI response
     text = response["choices"][0]["message"]["content"]
-    print(text)
-    print(type(text))
 
-    # Create a response dictionary
-    response_data = json.dumps(text)
+    response_data = {
+        "responseText": text  # Return the response text as "responseText"
+    }
 
-    # Return the response as a JSON object
     return response_data
 
 
