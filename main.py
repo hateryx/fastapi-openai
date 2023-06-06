@@ -17,7 +17,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     # Replace with the origin of your Next.js app
-    allow_origins=["https://next-ai-psych.vercel.app/"],
+    allow_origins=["https://next-ai-psych.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
