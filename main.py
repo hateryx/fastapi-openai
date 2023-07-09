@@ -18,7 +18,7 @@ app.add_middleware(
     CORSMiddleware,
     # Replace with the origin of your Next.js app
     allow_origins=["https://next-ai-psych.vercel.app",
-                   "http://192.168.86.105:3000"],
+                   "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
